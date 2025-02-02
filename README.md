@@ -1,3 +1,5 @@
+# EC Prediction
+
 ## Diamond Benchmark
 
 This project use DIAMOND tool as benchmark. The pipeline utilizes UniRef50 as the reference database and processes protein sequences to generate alignment results.
