@@ -28,7 +28,12 @@ def find_best_ec_numbers(output_file):
     """Iterates through hits and returns the first EC number found."""
     best_hits = parse_best_hits(output_file)
     results = []
+    print(len(best_hits))
+    i = 0
     for query, subjects in best_hits.items():
+        i+=1
+        if i%10 == 0:
+            print(i)
         for subject in subjects:
             uniprot_id = subject.split('_')[1]  # Extract UniProt ID
             ec_number = get_ec_number(uniprot_id)
@@ -38,6 +43,7 @@ def find_best_ec_numbers(output_file):
             time.sleep(0.05)  # To avoid hitting API limits
         if not any(query in result for result in results):
             results.append((query, None, "No EC number found"))
+
     return results
 
 def save_to_csv(results, output_csv="ec_results.csv"):
