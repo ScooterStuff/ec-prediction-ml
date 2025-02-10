@@ -82,8 +82,8 @@ def compute_metrics(results):
     print(f"First Number Precision: {precision_first:.2f}, Recall: {recall_first:.2f}, F1-Score: {f1_first:.2f}")
 
 def main():
-    ec40_file = "ec40.csv"
-    ec_results_file = "ec_results.csv"
+    ec40_file = "dataset/ec40/ec40.csv"
+    ec_results_file = "dataset/test_sequences/test_sequences_ec_results.csv"
     
     print("Loading data...")
     ec40, ec_results = load_data(ec40_file, ec_results_file)
