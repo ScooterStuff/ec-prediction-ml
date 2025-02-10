@@ -34,3 +34,10 @@ Some files are too large to be included in this repository, but you can generate
 ### `fetch_ec.py`
 
 This script is included in the repository. It is responsible for fetching Enzyme Commission (EC) numbers from the UniProt API.
+
+# Steps
+
+1.Goto `dimond.ipynb`, follow the instructions
+  + which combined step 1,2,3 for DIAMOND Benchmark
+2. Run `fetch_ec.py` or `fetch_ec_improved.py` to convert DIAMOND result to EC_Number
+3. Run `evaluate_ec` to generate prediction report
