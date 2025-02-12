@@ -62,9 +62,15 @@ def compute_metrics(results):
     print(f"First Number Match Accuracy: {accuracy_first_number:.2f}%")
     
     print("Per First-Number Accuracy:")
+    first_num_acc = {
+        "first_num": [],
+        "accuracy (%)": []
+    }
     for first_num, counts in first_number_accuracy.items():
         acc = (counts['correct'] / counts['total']) * 100 if counts['total'] > 0 else 0
         print(f"  EC {first_num}: {acc:.2f}%")
+        first_num_acc["first_num"].append(first_num)
+        first_num_acc["accuracy (%)"].append(acc)
     
     y_true = [1 if row['True EC'] else 0 for _, row in results.iterrows()]
     y_pred_exact = [1 if row['Exact Match'] else 0 for _, row in results.iterrows()]
@@ -81,9 +87,44 @@ def compute_metrics(results):
     print(f"Exact Precision: {precision_exact:.2f}, Recall: {recall_exact:.2f}, F1-Score: {f1_exact:.2f}")
     print(f"First Number Precision: {precision_first:.2f}, Recall: {recall_first:.2f}, F1-Score: {f1_first:.2f}")
 
-def main():
-    ec40_file = "dataset/ec40/ec40.csv"
-    ec_results_file = "dataset/test_sequences/test_sequences_ec_results.csv"
+    cols = [
+        f"EC {num}" if num.isdigit() else num
+        for num in first_num_acc["first_num"]
+    ]
+    sorted_cols = sorted(
+        cols,
+        key=lambda x: int(x.split()[1]) if x.startswith("EC ") else float('inf')
+    )
+
+    accuracy_df = pd.DataFrame({
+        col: [acc] for col, acc in zip(cols, first_num_acc["accuracy (%)"])
+    }, columns=sorted_cols)
+
+    metrics_df = pd.DataFrame({
+        "Method": ["DIMOND Benchmark"],
+        "Exact Match Accuracy": [accuracy_exact],
+        "First Number Match Accuracy": [accuracy_first_number],
+        "Exact Precision": [precision_exact],
+        "Exact Recall": [recall_exact],
+        "Exact F1-Score": [f1_exact],
+        "First Number Precision": [precision_first],
+        "First Number Recall": [recall_first],
+        "First Number F1-Score": [f1_first]
+    })
+
+
+    merged_df = pd.concat([metrics_df, accuracy_df], axis=1)
+
+    return merged_df
+    
+
+def evaluate_ec(ec_results_file, metrics_file, evaluate_file, ec40_file):
+    '''
+    ec_results_file: EC given by DIAMOND
+    metrics_file: Generated metrics
+    evaluate_file: EC evaluate file
+    ec40_file: EC40 file with true EC numberss
+    '''
     
     print("Loading data...")
     ec40, ec_results = load_data(ec40_file, ec_results_file)
@@ -92,11 +133,13 @@ def main():
     results = match_predictions(ec40, ec_results)
     
     print("Computing evaluation metrics...")
-    compute_metrics(results)
+    metrics = compute_metrics(results)
     
     # Save results for further analysis
-    results.to_csv("evaluation_results.csv", index=False)
-    print("Saved results to evaluation_results.csv")
+    metrics.to_csv(metrics_file, index=False)
+    results.to_csv(evaluate_file, index=False)
+    print(f"Saved results to {metrics_file} and {evaluate_file}")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     ec_results_file = "dataset/test_sequences/test_sequences_ec_results.csv"
+#     evaluate_ec(ec_results_file)

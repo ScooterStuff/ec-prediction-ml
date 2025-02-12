@@ -1,6 +1,7 @@
 import requests
 import time
 import csv
+from tqdm import tqdm
 
 def parse_best_hits(output_file):
     """Parses the DIAMOND output file and returns the best hit for each query."""
@@ -28,12 +29,7 @@ def find_best_ec_numbers(output_file):
     """Iterates through hits and returns the first EC number found."""
     best_hits = parse_best_hits(output_file)
     results = []
-    print(len(best_hits))
-    i = 0
-    for query, subjects in best_hits.items():
-        i+=1
-        if i%10 == 0:
-            print(i)
+    for query, subjects in tqdm(best_hits.items(), desc="Processing queries", unit="query"):
         for subject in subjects:
             uniprot_id = subject.split('_')[1]  # Extract UniProt ID
             ec_number = get_ec_number(uniprot_id)
@@ -53,16 +49,18 @@ def save_to_csv(results, output_csv="ec_results.csv"):
         writer.writerow(["Query", "Subject", "EC Number"])
         writer.writerows(results)
 
-def main():
-    output_file = "diamond_results.m8"
+def fetch_ec(output_file, ec_results_file):
     
     print("Parsing DIAMOND output...")
     ec_results = find_best_ec_numbers(output_file)
     
     print("Saving results to CSV...")
-    save_to_csv(ec_results)
+    save_to_csv(ec_results, output_csv=ec_results_file)
     
-    print(f"Results saved to 'ec_results.csv'")
+    print(f"Results saved to '{ec_results_file}'")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+    # output_file = "../dataset/test_sequences/test_sequences_results.m8"
+    # ec_result_path = "../dataset/test_sequences/test_sequences_ec_results.csv"
+
+    # fetch_ec(output_file, ec_result_path)

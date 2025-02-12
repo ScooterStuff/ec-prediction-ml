@@ -5,9 +5,6 @@ import csv
 import os
 from tqdm import tqdm  # For progress bar
 
-output_file = "dataset/test_sequences/test_sequences_results.m8"
-ec_result_path = "dataset/test_sequences/test_sequences_ec_results.csv"
-
 def parse_best_hits(output_file):
     """Parses the DIAMOND output file and returns the best hits for each query."""
     best_hits = {}
@@ -54,9 +51,9 @@ async def process_query(query, subjects, session, sem):
             return (query, subject, ec_number)
     return (query, None, "No EC number found")
 
-async def main_async():
+async def main_async(dimond_result_file):
     
-    best_hits = parse_best_hits(output_file)
+    best_hits = parse_best_hits(dimond_result_file)
     
     tasks = []
     sem = asyncio.Semaphore(20)  # Limit to 20 concurrent requests
@@ -81,14 +78,17 @@ def save_to_csv(results, output_csv="ec_results.csv"):
         writer.writerow(["Query", "Subject", "EC Number"])
         writer.writerows(results)
 
-def main():
+def fetch_ec_async(dimond_result_path, ec_result_path):
     
     print("Parsing DIAMOND output and fetching EC numbers concurrently...")
-    results = asyncio.run(main_async())
+    results = asyncio.run(main_async(dimond_result_path))
     
     print("Saving results to CSV...")
     save_to_csv(results, ec_result_path)
     print(f"Results saved to '{ec_result_path}'")
 
 if __name__ == "__main__":
-    main()
+    output_file = "../dataset/test_sequences/test_sequences_results.m8"
+    ec_result_path = "../dataset/test_sequences/test_sequences_ec_results.csv"
+
+    fetch_ec_async(output_file, ec_result_path)
