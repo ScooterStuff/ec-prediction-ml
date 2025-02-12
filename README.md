@@ -2,42 +2,40 @@
 
 ## Diamond Benchmark
 
-This project use DIAMOND tool as benchmark. The pipeline utilizes UniRef50 as the reference database and processes protein sequences to generate alignment results.
+This project use DIAMOND tool as benchmark. The pipeline utilizes UniRef90 as the reference database and processes protein sequences to generate alignment results.
 
-1. Install DIAMOND
-   Ensure you have DIAMOND installed on your system. You can download it from the official website.
+### Instructions
 
-2. Prepare the Database
-   Download the UniRef50 database and create a DIAMOND database:
-   `diamond.exe makedb --in uniref50.fasta -d uniref50_db`
+Goto `dimond.ipynb`, follow all the instructions
++ You may have to download several python packages to set everything up.
++ All code in there is written in `linux`. For different OS, you may need to rewrite some command
++ The output is already generated in `/stat` and `/dataset/test_sequences`, you may not have to run it again
 
-- `uniref50.fasta`: The UniRef50 protein sequence database file.
-- `uniref50_db`: The output DIAMOND database.
-
-3. Run Protein Search
-   Download ec40 dataset and transform it to fasta. Then use DIAMOND to perform a BLASTP search on the test sequences:
-   `diamond.exe blastp --db uniref50_db.dmnd --query test_sequences.fasta --out diamond_results.m8 --threads 16`
-
-- `test_sequences.fasta`: Input file containing query protein sequences.
-- `diamond_results.m8`: Output file storing the search results.
-- `--threads 16`: Uses 16 CPU threads for faster processing (This depend on your computer, mine max is 16).
 
 ### File Information
 
 Some files are too large to be included in this repository, but you can generate them yourself following the steps above:
 
-- `diamond.exe`: The DIAMOND executable.
-- `uniref50.fasta`: The UniRef50 protein database.
-- `test_sequences.fasta`: Test query sequences.
-- `diamond_results.m8`: The result file generated after running DIAMOND.
+`dataset` : storing all data, including training, test and database sequences
+- `diamond_db`: The DIAMOND database folder. (create script in `experiments/dimond.ipynb`)
+   - `uniref90.fasta.gz` : original UniRef90 data zip
+   - `uniref90.dmnd` : The UniRef90 database for DIAMOND to align
+- `ec40` : All the ec40 original data
+   - including .pkl, .csv formats
+- `test_sequences`: Storing the original test sequence and intermidiate processed files
+   - `test_sequences.fasta`: Test query sequences.
+   - `test_sequences_results.m8` : DIAMOND alignment result file
+   - `test_sequences_ec_results.csv` : EC number fetched from UniProt API according to DIMOND output
+   - `evaluation_results.csv` : Prediction result for every sequences in `test_sequences.fasta`
 
-### `fetch_ec.py`
+`metrics` : Containing methods' statisitical metrics
 
-This script is included in the repository. It is responsible for fetching Enzyme Commission (EC) numbers from the UniProt API.
+   - `metrics.csv` : DIAMOND benchmark report
 
-# Steps
+`experiments`: All methods and utils
+   - `dimond` : DIMOND execution file, can be download in `dimond.ipynb` (for linux)
+   - `dimond.ipynb` : Pipeline for DIAMOND benchmark (All stage included, no need to download any data your self!)
+   - `evaluate_ec.py` : Evaluation util to compare predicted EC numbers and true EC numbers, then generate stats report
+   - `fetch_ec_improved` and `fetch_ec` : Fetch utils to get EC numbers from DIAMOND results. Improved version implemented async stages to run fetch simultaneously.
 
-1.Goto `dimond.ipynb`, follow the instructions
-  + which combined step 1,2,3 for DIAMOND Benchmark
-2. Run `fetch_ec.py` or `fetch_ec_improved.py` to convert DIAMOND result to EC_Number
-3. Run `evaluate_ec` to generate prediction report
+
