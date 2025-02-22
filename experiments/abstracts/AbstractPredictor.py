@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-class AbstractModeling(ABC):
+class AbstractPredictor(ABC):
     def __init__(self, model_params=None):
         """
         Initialize the modeling with optional parameters.

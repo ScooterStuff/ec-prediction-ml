@@ -14,12 +14,11 @@ class AbstractDataLoader(ABC):
         self.test_path = test_path
         self.feature_path = None  # This will store the final feature file path
 
-    @abstractmethod
     def load_and_split(self):
         '''
         Load entire data file, filter invalid data and split train, valid and test.
         '''
-        raise NotImplementedError()
+        pass
 
     def load_test(self):
         """

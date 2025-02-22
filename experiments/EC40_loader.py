@@ -3,9 +3,17 @@ import pandas as pd
 
 class EC40_loader(AbstractDataLoader):
 
-    def __init__(self, file_path, train_path, valid_path, test_path):
-        super().__init__(file_path, train_path, valid_path, test_path)
+    def get_fasta(self, df, fasta_path):
 
+        print(f"Found {len(df)} test sequences.")
+
+        # Write the test sequences to a FASTA file.
+        # We will use the 'accession' column as the FASTA header and 'sequence' as the sequence.
+        with open(fasta_path, "w") as fout:
+            for index, row in df.iterrows():
+                accession = row["accession"]
+                sequence = row["sequence"]
+                fout.write(f">{accession}\n{sequence}\n")
 
     def load_and_split(self):
         ec40 = pd.read_pickle(self.file_path)
