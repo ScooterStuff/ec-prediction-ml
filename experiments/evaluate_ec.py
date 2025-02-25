@@ -53,6 +53,9 @@ def compute_metrics(results):
     first_number_accuracy = defaultdict(lambda: {'correct': 0, 'total': 0})
     
     for _, row in results.iterrows():
+        pred_ec = row['Predicted EC']
+        if pred_ec in ["No EC number found", "No Prediction"]:
+            continue
         first_num = row['First Number']
         first_number_accuracy[first_num]['total'] += 1
         if row['First Number Match']:
@@ -87,9 +90,11 @@ def compute_metrics(results):
     print(f"Exact Precision: {precision_exact:.2f}, Recall: {recall_exact:.2f}, F1-Score: {f1_exact:.2f}")
     print(f"First Number Precision: {precision_first:.2f}, Recall: {recall_first:.2f}, F1-Score: {f1_first:.2f}")
 
+    no_ec_count = results[results['Predicted EC'] == "No EC number found"].shape[0] / total_queries
+    no_pred_count = results[results['Predicted EC'] == "No Prediction"].shape[0] / total_queries
+
     cols = [
-        f"EC {num}" if num.isdigit() else num
-        for num in first_num_acc["first_num"]
+        f"EC {num}" for num in first_num_acc["first_num"]
     ]
     sorted_cols = sorted(
         cols,
@@ -109,9 +114,10 @@ def compute_metrics(results):
         "Exact F1-Score": [f1_exact],
         "First Number Precision": [precision_first],
         "First Number Recall": [recall_first],
-        "First Number F1-Score": [f1_first]
+        "First Number F1-Score": [f1_first],
+        "No EC number found": [no_ec_count],
+        "No Prediction": [no_pred_count]
     })
-
 
     merged_df = pd.concat([metrics_df, accuracy_df], axis=1)
 

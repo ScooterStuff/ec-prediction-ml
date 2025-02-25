@@ -88,7 +88,7 @@ def fetch_ec_async(dimond_result_path, ec_result_path):
     print(f"Results saved to '{ec_result_path}'")
 
 if __name__ == "__main__":
-    output_file = "../dataset/test_sequences/test_sequences_results.m8"
-    ec_result_path = "../dataset/test_sequences/test_sequences_ec_results.csv"
+    output_file = "dataset/diamond_results/test_sequences_results.m8"
+    ec_result_path = "dataset/diamond_results/test_sequences_ec_results.csv"
 
     fetch_ec_async(output_file, ec_result_path)
