@@ -4,10 +4,6 @@ import itertools
 
 class DiamondFeatureEngineer(AbstractFeatureEngineer):
 
-    def __init__(self, data_loader, feature_loader, identity):
-        super().__init__(data_loader, feature_loader)
-        self.identity = identity
-
     def apply_feature_engineering(self, flag):
 
         if flag == "train":
@@ -34,7 +30,7 @@ class DiamondFeatureEngineer(AbstractFeatureEngineer):
             for query, group in itertools.groupby(infile, key=lambda line: line.split("\t")[0]):
                 lines = list(group)
                 # Filter for lines where the identity (column 3) is <= 40.
-                low_lines = [line for line in lines if float(line.strip().split("\t")[2]) <= self.identity]
+                low_lines = [line for line in lines if float(line.strip().split("\t")[2]) <= 40]
                 if low_lines:
                     for line in low_lines:
                         outfile.write(line)

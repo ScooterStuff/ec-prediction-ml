@@ -1,5 +1,6 @@
 dataset/dimond_db
 experiments/diamond
-experiments/__pycache__
-dataset/test_sequences/test_sequences_ec_results.csv
-dataset/test_sequences/test_sequences_results.m8
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

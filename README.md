@@ -21,13 +21,10 @@ Some files are too large to be included in this repository, but you can generate
    - `uniref90.fasta.gz` : original UniRef90 data zip
    - `uniref90.dmnd` : The UniRef90 database for DIAMOND to align
 - `ec40` : All the ec40 original data
-   - including .pkl, .csv formats
+   - including `.pkl`, `.csv` and `.fasta` formats
 - `diamond_results`: Storing the original test sequence and intermidiate processed files
-   - `test_sequences.fasta`: Test query sequences.
-   - `test_sequences_results.m8` : DIAMOND alignment result file
-   - `test_sequences_filtered.m8`: Filtered DIAMOND results via identity
-   - `test_sequences_ec_results.csv` : EC number fetched from UniProt API according to DIMOND output
-   - `evaluation_results.csv` : Prediction result for every sequences in `test_sequences.fasta`
+   - `cdhit04_uniprot_sprot_2016_07.pkl`: Cdhit cluster result from UDSMProt
+   - Rest are intermidiate files from running DIAMOND
 
 `metrics` : Containing methods' statisitical metrics
 
@@ -38,6 +35,7 @@ Some files are too large to be included in this repository, but you can generate
    - `dimond.ipynb` : Pipeline for DIAMOND benchmark (All stage included, no need to download any data your self!)
    - `evaluate_ec.py` : Evaluation util to compare predicted EC numbers and true EC numbers, then generate stats report
    - `fetch_ec_improved` and `fetch_ec` : Fetch utils to get EC numbers from DIAMOND results. Improved version implemented async stages to run fetch simultaneously.
+   - `constants`: some global constants
 
 `abstracts`: abstract implementation for Dataloader, FeatureEngineer and Predictor.
 
