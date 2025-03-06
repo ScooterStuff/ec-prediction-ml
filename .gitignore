@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+dataset/scooter_features
+dataset/physiochemical
+experiments/PSSM/ncbi-blast-2.16.0+
+experiments/Diamond/diamond
