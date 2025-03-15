@@ -7,4 +7,11 @@ __pycache__/
 dataset/scooter_features
 dataset/physiochemical
 experiments/PSSM/ncbi-blast-2.16.0+
+experiments/PSSM/seqtk
 experiments/Diamond/diamond
+experiments/HMM/hmmer-3.4
+dataset/HMM
+dataset/pssm
+dataset/diamond_results
+experiments/abstracts/__pycache__
+dataset/peptides

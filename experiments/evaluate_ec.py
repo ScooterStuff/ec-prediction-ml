@@ -28,109 +28,111 @@ def match_predictions(ec40, ec_results):
         else:
             pred_ec = pred_row.iloc[0]['EC Number']
         
-        first_number_match = any(pred_ec.split('.')[0] == ec.split('.')[0] for ec in true_ecs if pred_ec != 'No Prediction')
+        true_ec_split = [ec.split('.') for ec in true_ecs]
+        pred_ec_split = pred_ec.split('.') if pred_ec != 'No Prediction' else []
+        
+        # Pad EC numbers to ensure they have four parts
+        true_ec_split = [ec + ['-'] * (4 - len(ec)) for ec in true_ec_split]
+        pred_ec_split += ['-'] * (4 - len(pred_ec_split))
+        
+        # Compare each position
+        match_flags = []
+        for i in range(4):
+            position_matches = [ec[i] == pred_ec_split[i] for ec in true_ec_split if ec[i] != '-']
+            match = any(position_matches)
+            match_flags.append(match)
+        
+        exact_match = all(match_flags)
+        no_ec_found = pred_ec == 'No Prediction' or pred_ec == 'No EC number found'
         
         results.append({
             'Query': query,
             'True EC': true_ecs,
             'Predicted EC': pred_ec,
-            'Exact Match': pred_ec in true_ecs if pred_ec != 'No Prediction' else False,
-            'First Number Match': first_number_match,
-            'First Number': pred_ec.split('.')[0] if pred_ec != 'No Prediction' else 'No Prediction'
+            'Exact Match': exact_match,
+            'No EC number found': no_ec_found,
+            'Position Matches': match_flags
         })
-    
+        
     return pd.DataFrame(results)
 
-def compute_metrics(results):
-    """Computes Accuracy, Precision, Recall, and F1-Score for both exact and first-number matches, including per first-number accuracy."""
-    exact_matches = results['Exact Match'].sum()
-    total_queries = len(results)
-    accuracy_exact = exact_matches / total_queries * 100
+def compute_metrics(results, method_name):
+    """Computes metrics and returns a DataFrame similar to evaluate_ec_predictions."""
+    n_samples = len(results)
+    n_positions = 4  # Four parts in EC numbers
     
-    first_number_matches = results['First Number Match'].sum()
-    accuracy_first_number = first_number_matches / total_queries * 100
+    exact_match_flags = results['Exact Match'].tolist()
+    no_ec_found_flags = results['No EC number found'].tolist()
     
-    # Compute per first-number accuracy
-    first_number_accuracy = defaultdict(lambda: {'correct': 0, 'total': 0})
+    position_match_flags = [[] for _ in range(n_positions)]
+    for flags in results['Position Matches']:
+        for i, match in enumerate(flags):
+            position_match_flags[i].append(match)
     
-    for _, row in results.iterrows():
-        pred_ec = row['Predicted EC']
-        if pred_ec in ["No EC number found", "No Prediction"]:
-            continue
-        first_num = row['First Number']
-        first_number_accuracy[first_num]['total'] += 1
-        if row['First Number Match']:
-            first_number_accuracy[first_num]['correct'] += 1
+    exact_match_accuracy = sum(exact_match_flags) / n_samples * 100
+    no_ec_found_ratio = sum(no_ec_found_flags) / n_samples * 100
+    no_prediction_ratio = no_ec_found_ratio  # Assuming 'No Prediction' and 'No EC number found' are equivalent
     
-    print(f"Exact Match Accuracy: {accuracy_exact:.2f}%")
-    print(f"First Number Match Accuracy: {accuracy_first_number:.2f}%")
+    position_accuracies = []
+    position_precisions = []
+    position_recalls = []
+    position_f1_scores = []
     
-    print("Per First-Number Accuracy:")
-    first_num_acc = {
-        "first_num": [],
-        "accuracy (%)": []
+    for pos in range(n_positions):
+        y_true = []
+        y_pred = []
+        for idx, row in results.iterrows():
+            true_ecs = row['True EC']
+            pred_ec = row['Predicted EC']
+            if pred_ec in ["No EC number found", "No Prediction"]:
+                pred_part = '-'
+            else:
+                pred_split = pred_ec.split('.')
+                pred_part = pred_split[pos] if pos < len(pred_split) else '-'
+            for true_ec in true_ecs:
+                true_split = true_ec.split('.')
+                true_part = true_split[pos] if pos < len(true_split) else '-'
+                if true_part != '-':
+                    y_true.append(true_part)
+                    y_pred.append(pred_part)
+        
+        accuracy = sum(position_match_flags[pos]) / n_samples * 100
+        position_accuracies.append(accuracy)
+        
+        if y_true:
+            precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
+            recall = recall_score(y_true, y_pred, average='macro', zero_division=0)
+            f1 = f1_score(y_true, y_pred, average='macro', zero_division=0)
+        else:
+            precision = recall = f1 = 0.0
+        
+        position_precisions.append(precision * 100)
+        position_recalls.append(recall * 100)
+        position_f1_scores.append(f1 * 100)
+    
+    result_dict = {
+        "Method": [method_name],
+        "Exact Match Accuracy": [exact_match_accuracy],
+        "No EC number found": [no_ec_found_ratio],
+        "No Prediction": [no_prediction_ratio],
     }
-    for first_num, counts in first_number_accuracy.items():
-        acc = (counts['correct'] / counts['total']) * 100 if counts['total'] > 0 else 0
-        print(f"  EC {first_num}: {acc:.2f}%")
-        first_num_acc["first_num"].append(first_num)
-        first_num_acc["accuracy (%)"].append(acc)
     
-    y_true = [1 if row['True EC'] else 0 for _, row in results.iterrows()]
-    y_pred_exact = [1 if row['Exact Match'] else 0 for _, row in results.iterrows()]
-    y_pred_first = [1 if row['First Number Match'] else 0 for _, row in results.iterrows()]
+    for pos in range(n_positions):
+        pos_idx = pos + 1
+        result_dict[f"Position {pos_idx} Accuracy"] = [position_accuracies[pos]]
+        result_dict[f"Position {pos_idx} Precision"] = [position_precisions[pos]]
+        result_dict[f"Position {pos_idx} Recall"] = [position_recalls[pos]]
+        result_dict[f"Position {pos_idx} F1-Score"] = [position_f1_scores[pos]]
     
-    precision_exact = precision_score(y_true, y_pred_exact, zero_division=0)
-    recall_exact = recall_score(y_true, y_pred_exact, zero_division=0)
-    f1_exact = f1_score(y_true, y_pred_exact, zero_division=0)
-    
-    precision_first = precision_score(y_true, y_pred_first, zero_division=0)
-    recall_first = recall_score(y_true, y_pred_first, zero_division=0)
-    f1_first = f1_score(y_true, y_pred_first, zero_division=0)
-    
-    print(f"Exact Precision: {precision_exact:.2f}, Recall: {recall_exact:.2f}, F1-Score: {f1_exact:.2f}")
-    print(f"First Number Precision: {precision_first:.2f}, Recall: {recall_first:.2f}, F1-Score: {f1_first:.2f}")
+    result_df = pd.DataFrame(result_dict)
+    return result_df
 
-    no_ec_count = results[results['Predicted EC'] == "No EC number found"].shape[0] / total_queries
-    no_pred_count = results[results['Predicted EC'] == "No Prediction"].shape[0] / total_queries
-
-    cols = [
-        f"EC {num}" for num in first_num_acc["first_num"]
-    ]
-    sorted_cols = sorted(
-        cols,
-        key=lambda x: int(x.split()[1]) if x.startswith("EC ") else float('inf')
-    )
-
-    accuracy_df = pd.DataFrame({
-        col: [acc] for col, acc in zip(cols, first_num_acc["accuracy (%)"])
-    }, columns=sorted_cols)
-
-    metrics_df = pd.DataFrame({
-        "Method": ["DIMOND Benchmark"],
-        "Exact Match Accuracy": [accuracy_exact],
-        "First Number Match Accuracy": [accuracy_first_number],
-        "Exact Precision": [precision_exact],
-        "Exact Recall": [recall_exact],
-        "Exact F1-Score": [f1_exact],
-        "First Number Precision": [precision_first],
-        "First Number Recall": [recall_first],
-        "First Number F1-Score": [f1_first],
-        "No EC number found": [no_ec_count],
-        "No Prediction": [no_pred_count]
-    })
-
-    merged_df = pd.concat([metrics_df, accuracy_df], axis=1)
-
-    return merged_df
-    
-
-def evaluate_ec(ec_results_file, metrics_file, evaluate_file, ec40_file):
+def evaluate_ec(ec_results_file, evaluate_file, ec40_file, method_name):
     '''
-    ec_results_file: EC given by DIAMOND
-    metrics_file: Generated metrics
-    evaluate_file: EC evaluate file
-    ec40_file: EC40 file with true EC numberss
+    ec_results_file: EC numbers predicted by the model
+    evaluate_file: Path to save detailed evaluation results
+    ec40_file: EC40 file with true EC numbers
+    method_name: Name of the method for reporting
     '''
     
     print("Loading data...")
@@ -140,130 +142,93 @@ def evaluate_ec(ec_results_file, metrics_file, evaluate_file, ec40_file):
     results = match_predictions(ec40, ec_results)
     
     print("Computing evaluation metrics...")
-    metrics = compute_metrics(results)
+    metrics = compute_metrics(results, method_name)
     
-    # Save results for further analysis
-    metrics.to_csv(metrics_file, index=False)
     results.to_csv(evaluate_file, index=False)
-    print(f"Saved results to {metrics_file} and {evaluate_file}")
-
-
-def evaluate_ec_predictions(true_labels: np.ndarray, pred_labels: np.ndarray) -> pd.DataFrame:
-    """
-    Evaluate n×4 EC prediction results and return a DataFrame with main evaluation metrics.
-
-    Parameters
-    ----------
-    true_labels : np.ndarray, shape (n, 4)
-        Ground truth EC numbers, each row is [EC1, EC2, EC3, EC4]. -1 indicates no value.
-    pred_labels : np.ndarray, shape (n, 4)
-        Predicted EC numbers, each row is [EC1, EC2, EC3, EC4]. -1 indicates no prediction.
-
-    Returns
-    -------
-    result_df : pd.DataFrame
-        A DataFrame containing the following columns:
-        [
-          Method, Exact Match Accuracy, First Number Match Accuracy,
-          Exact Precision, Exact Recall, Exact F1-Score,
-          First Number Precision, First Number Recall, First Number F1-Score,
-          No EC number found, No Prediction,
-          EC 1, EC 2, EC 3, EC 4, EC 5, EC 6, EC 7
-        ]
-    """
-
-    n = true_labels.shape[0]
+    print(f"Saved results to and {evaluate_file}")
     
-    # Flags for different match conditions
+    return metrics
+
+
+
+def evaluate_ec_predictions(true_labels: np.ndarray, pred_labels: np.ndarray, method_name: str) -> pd.DataFrame:
+    n_samples = true_labels.shape[0]
+    n_positions = true_labels.shape[1]
+
     exact_match_flags = []
-    first_num_match_flags = []
-    no_ec_found_flags = []  # True if the prediction is all -1
+    no_ec_found_flags = []
 
-    # For accuracy per first number (pred[0])
-    first_number_accuracy = defaultdict(lambda: {'correct': 0, 'total': 0})
+    position_match_flags = [[] for _ in range(n_positions)]
 
-    for i in range(n):
+    for i in range(n_samples):
         true_ec = true_labels[i]
         pred_ec = pred_labels[i]
 
-        # (a) Check if prediction is entirely -1
         no_ec_found = np.all(pred_ec == -1)
         no_ec_found_flags.append(no_ec_found)
 
-        # (b) Exact match if all four positions match
         exact_match = np.all(pred_ec == true_ec)
         exact_match_flags.append(exact_match)
 
-        # (c) First number match if pred_ec[0] == true_ec[0] and not -1
-        first_match = (pred_ec[0] != -1 and pred_ec[0] == true_ec[0])
-        first_num_match_flags.append(first_match)
+        for pos in range(n_positions):
+            true_val = true_ec[pos]
+            pred_val = pred_ec[pos]
 
-        # (d) Record accuracy for the predicted first number
-        if pred_ec[0] != -1:
-            fnum_str = str(int(pred_ec[0]))  # convert 1,2,... to '1','2',...
-            first_number_accuracy[fnum_str]['total'] += 1
-            if first_match:
-                first_number_accuracy[fnum_str]['correct'] += 1
+            if true_val != -1:
+                if pred_val != -1 and pred_val == true_val:
+                    position_match_flags[pos].append(True)
+                else:
+                    position_match_flags[pos].append(False)
+            else:
+                position_match_flags[pos].append(False)
 
-    # ---------------- 2. Compute overall metrics ----------------
-    exact_match_count = sum(exact_match_flags)
-    first_num_match_count = sum(first_num_match_flags)
+    exact_match_accuracy = sum(exact_match_flags) / n_samples * 100
 
-    accuracy_exact = exact_match_count / n * 100
-    accuracy_first = first_num_match_count / n * 100
+    no_ec_found_ratio = sum(no_ec_found_flags) / n_samples * 100
 
-    # Ratio of rows predicted entirely as -1
-    no_ec_found_ratio = sum(no_ec_found_flags) / n
+    no_prediction_ratio = no_ec_found_ratio
 
-    # “No Prediction” is set to 0.0 here (modify as needed)
-    no_prediction_ratio = 0.0
+    position_accuracies = []
+    position_precisions = []
+    position_recalls = []
+    position_f1_scores = []
 
-    # ---------------- 3. Accuracy per first number (1~7) ----------------
-    ec_accuracies = {}
-    for ec_num in range(1, 8):
-        key = str(ec_num)
-        if first_number_accuracy[key]['total'] > 0:
-            acc = (first_number_accuracy[key]['correct'] /
-                   first_number_accuracy[key]['total']) * 100
+    for pos in range(n_positions):
+        match_flags = position_match_flags[pos]
+
+        valid_indices = true_labels[:, pos] != -1
+        y_true = true_labels[valid_indices, pos]
+        y_pred = pred_labels[valid_indices, pos]
+
+        y_pred_processed = np.where(y_pred != -1, y_pred, -99)
+
+        accuracy = sum(match_flags) / n_samples * 100
+        position_accuracies.append(accuracy)
+
+        if len(y_true) > 0:
+            precision = precision_score(y_true, y_pred_processed, average='macro', zero_division=0)
+            recall = recall_score(y_true, y_pred_processed, average='macro', zero_division=0)
+            f1 = f1_score(y_true, y_pred_processed, average='macro', zero_division=0)
         else:
-            acc = 0.0
-        ec_accuracies[f"EC {ec_num}"] = acc
+            precision = recall = f1 = 0.0
 
-    # ---------------- 4. Precision, Recall, F1 ----------------
-    # Example: y_true = 1 if there's at least one EC position != -1; else 0
-    y_true = [1 if not np.all(t == -1) else 0 for t in true_labels]
-    # exact match
-    y_pred_exact = [1 if flag else 0 for flag in exact_match_flags]
-    # first number match
-    y_pred_first = [1 if flag else 0 for flag in first_num_match_flags]
+        position_precisions.append(precision)
+        position_recalls.append(recall)
+        position_f1_scores.append(f1)
 
-    precision_exact = precision_score(y_true, y_pred_exact, zero_division=0)
-    recall_exact = recall_score(y_true, y_pred_exact, zero_division=0)
-    f1_exact = f1_score(y_true, y_pred_exact, zero_division=0)
-
-    precision_first = precision_score(y_true, y_pred_first, zero_division=0)
-    recall_first = recall_score(y_true, y_pred_first, zero_division=0)
-    f1_first = f1_score(y_true, y_pred_first, zero_division=0)
-
-    # ---------------- 5. Assemble result DataFrame ----------------
     result_dict = {
-        "Method": ["Physiochemical Features"],
-        "Exact Match Accuracy": [accuracy_exact],
-        "First Number Match Accuracy": [accuracy_first],
-        "Exact Precision": [precision_exact],
-        "Exact Recall": [recall_exact],
-        "Exact F1-Score": [f1_exact],
-        "First Number Precision": [precision_first],
-        "First Number Recall": [recall_first],
-        "First Number F1-Score": [f1_first],
+        "Method": [method_name],
+        "Exact Match Accuracy": [exact_match_accuracy],
         "No EC number found": [no_ec_found_ratio],
-        "No Prediction": [no_prediction_ratio]
+        "No Prediction": [no_prediction_ratio],
     }
 
-    # Add columns EC 1 ~ EC 7
-    for ec_num in range(1, 8):
-        col_name = f"EC {ec_num}"
-        result_dict[col_name] = [ec_accuracies[col_name]]
+    for pos in range(n_positions):
+        pos_idx = pos + 1
+        result_dict[f"Position {pos_idx} Accuracy"] = [position_accuracies[pos]]
+        result_dict[f"Position {pos_idx} Precision"] = [position_precisions[pos]]
+        result_dict[f"Position {pos_idx} Recall"] = [position_recalls[pos]]
+        result_dict[f"Position {pos_idx} F1-Score"] = [position_f1_scores[pos]]
 
     result_df = pd.DataFrame(result_dict)
     return result_df
