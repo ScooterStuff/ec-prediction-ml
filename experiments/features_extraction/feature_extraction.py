@@ -3,6 +3,8 @@ import numpy as np
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import csv
 import pandas as pd
+import itertools
+from tqdm import tqdm
 
 # 1. Sequence Based Features
 def compute_aac(seq):
@@ -22,31 +24,14 @@ def compute_dipeptide_composition(seq):
     composition = {dp: dipeptides_counts.get(dp, 0)/total for dp in possible_dipeptides}
     return list(composition.values())
 
-def compute_tripeptide_composition(sequence):
-    """Compute tripeptide composition (frequency of consecutive 3-residue segments)."""
-    sequence = sequence.upper()
-    tripeptides = [sequence[i:i+3] for i in range(len(sequence)-2)]
-    total = len(tripeptides)
-    tripeptide_counts = collections.Counter(tripeptides)
-    # Here we only return those tripeptides present in the sequence to avoid an 8000-length vector.
-    composition = {tp: tripeptide_counts.get(tp, 0) / total for tp in tripeptides}
-    return list(composition.values())
-
-def compute_kmer_composition(sequence, k=3):
-    """Compute k-mer composition for a given k (default is 3)."""
-    sequence = sequence.upper()
-    kmers = [sequence[i:i+k] for i in range(len(sequence)-k+1)]
-    total = len(kmers)
-    kmer_counts = collections.Counter(kmers)
-    composition = {kmer: kmer_counts[kmer] / total for kmer in kmer_counts}
-    return list(composition.values())
-
 
 # 2. Physicochemical and Global Properties
 
+def replace_ambiguous(sequence, replacement='A'):
+    return sequence.upper().replace('X', replacement).replace('B', replacement).replace('O', replacement).replace('U', replacement).replace('Z', replacement)
 def compute_physicochemical_properties(sequence):
     """Compute properties such as molecular weight, pI, GRAVY, aromaticity, instability, aliphatic and Boman index."""
-    print(sequence)
+    sequence = replace_ambiguous(sequence, replacement='A')
     sequence = sequence.upper()
     analysis = ProteinAnalysis(sequence)
     props = {}
@@ -100,20 +85,26 @@ if  __name__ == "__main__":
     #     csv_reader = csv.reader(csvfile)
     #     for x in csv_reader:
     #         print(x)
+
     ec40 = pd.read_csv(data)
     ec40_seq = ec40.iloc[:, 1].tolist()
-    aac_result = [compute_aac(seq) for seq in ec40_seq]
-    dc_result = [compute_dipeptide_composition(seq) for seq in ec40_seq]
-    tc_result = [compute_tripeptide_composition(seq) for seq in ec40_seq]
-    kmerc_result = [compute_kmer_composition(seq, k=3) for seq in ec40_seq]
+
+    aac_result = [compute_aac(seq) for seq in tqdm(ec40_seq, desc="Computing AAC")]
+    dc_result = [compute_dipeptide_composition(seq) for seq in tqdm(ec40_seq, desc="Computing DC")]
+    pc_result = [compute_physicochemical_properties(seq) for seq in tqdm(ec40_seq, desc="Computing PC")]
+
 
     output_df = pd.DataFrame({
     "Original": ec40_seq,
     "AAC": aac_result,
     "DC": dc_result,
-    "TC":tc_result,
-    "KMERC":kmerc_result
     })
 
-    output_df.to_csv('output.csv', index=False)
+    pc_df = pd.DataFrame(pc_result)
+
+    output_df = pd.concat([output_df, pc_df], axis=1)
+
+    csv_filename = "output_results.csv"
+    output_df.to_csv(csv_filename, index=False)
+
     print('success')
