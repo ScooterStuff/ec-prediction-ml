@@ -15,3 +15,4 @@ dataset/pssm
 dataset/diamond_results
 experiments/abstracts/__pycache__
 dataset/peptides
+dataset/all_features
