@@ -1,10 +1,9 @@
-dataset/dimond_db
+dataset/*
 experiments/diamond
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-dataset/scooter_features
 dataset/physiochemical
 experiments/PSSM/ncbi-blast-2.16.0+
 experiments/PSSM/seqtk
