@@ -69,8 +69,8 @@ def compute_metrics(results, method_name):
         for i, match in enumerate(flags):
             position_match_flags[i].append(match)
     
-    exact_match_accuracy = sum(exact_match_flags) / n_samples * 100
-    no_ec_found_ratio = sum(no_ec_found_flags) / n_samples * 100
+    exact_match_accuracy = sum(exact_match_flags) / n_samples
+    no_ec_found_ratio = sum(no_ec_found_flags) / n_samples
     no_prediction_ratio = no_ec_found_ratio  # Assuming 'No Prediction' and 'No EC number found' are equivalent
     
     position_accuracies = []
@@ -96,7 +96,7 @@ def compute_metrics(results, method_name):
                     y_true.append(true_part)
                     y_pred.append(pred_part)
         
-        accuracy = sum(position_match_flags[pos]) / n_samples * 100
+        accuracy = sum(position_match_flags[pos]) / n_samples
         position_accuracies.append(accuracy)
         
         if y_true:
@@ -106,9 +106,9 @@ def compute_metrics(results, method_name):
         else:
             precision = recall = f1 = 0.0
         
-        position_precisions.append(precision * 100)
-        position_recalls.append(recall * 100)
-        position_f1_scores.append(f1 * 100)
+        position_precisions.append(precision)
+        position_recalls.append(recall)
+        position_f1_scores.append(f1)
     
     result_dict = {
         "Method": [method_name],
@@ -182,9 +182,9 @@ def evaluate_ec_predictions(true_labels: np.ndarray, pred_labels: np.ndarray, me
             else:
                 position_match_flags[pos].append(False)
 
-    exact_match_accuracy = sum(exact_match_flags) / n_samples * 100
+    exact_match_accuracy = sum(exact_match_flags) / n_samples
 
-    no_ec_found_ratio = sum(no_ec_found_flags) / n_samples * 100
+    no_ec_found_ratio = sum(no_ec_found_flags) / n_samples
 
     no_prediction_ratio = no_ec_found_ratio
 
@@ -202,7 +202,7 @@ def evaluate_ec_predictions(true_labels: np.ndarray, pred_labels: np.ndarray, me
 
         y_pred_processed = np.where(y_pred != -1, y_pred, -99)
 
-        accuracy = sum(match_flags) / n_samples * 100
+        accuracy = sum(match_flags) / n_samples
         position_accuracies.append(accuracy)
 
         if len(y_true) > 0:
