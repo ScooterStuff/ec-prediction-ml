@@ -18,3 +18,4 @@ dataset/all_features
 experiments/catboost_info
 experiments/Models
 experiments/Selected_Feature_Models
+.vscode

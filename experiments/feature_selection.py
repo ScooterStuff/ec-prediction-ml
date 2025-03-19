@@ -70,7 +70,7 @@ rfecv = RFECV(
     step=5,
     cv=pds,
     scoring=f1_scorer,
-    n_jobs=-1,
+    n_jobs=6,
     verbose=2
 )
 rfecv.fit(X_filtered, y_trainval)
