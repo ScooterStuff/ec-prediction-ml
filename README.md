@@ -44,6 +44,8 @@ Some files are too large to be included in this repository, but you can generate
 
 ## Machine Learning Modeling
 - See `experiments/pipeline.ipynb`
+
+----
 ### Feature Generation
 
 + PSSM Features:
@@ -60,6 +62,8 @@ Some files are too large to be included in this repository, but you can generate
    + Run `Hmmer` scan through pfam 
    + Take best (lowest) E-value, best (highest) bit score, total coverage and number of domains as final features
    + All instructions are included in `experiments/HMM/HMM_gen.ipynb`
+
+----
 
 ### Feature engineering
 - See `experiments/merge_features.ipynb`
@@ -103,9 +107,11 @@ Some files are too large to be included in this repository, but you can generate
 
 - **Matrix Truncation and Flattening:**  
   - Define the `truncate_and_flatten` function to convert PSSM matrices into fixed-size representations:
-    - If the matrix has fewer rows than the target (32 rows), pad it with zeros.
+    - If the matrix has fewer rows than the target (`2000` rows was choosing according to the distribution graph), pad it with zeros.
+    ![img](metrics/sequence_length_distribution.png)
     - If it exceeds the target, truncate the matrix to the target number of rows.
-    - Flatten the resulting fixed-size (32x42) matrix into a one-dimensional vector.
+    - Flatten the resulting fixed-size (2000x42) matrix into a one-dimensional vector.
+    - Due to computational resource limitation, we deployed PCA to reduce dimension to `10% (8400)` of original size.
   - Apply this function to each PSSM matrix in the training, validation, and test sets, and construct new DataFrames where each column is named `pssm_i` (with `i` being the vector index).
   - Merge these new PSSM features back into the corresponding datasets.
 
@@ -114,6 +120,52 @@ Some files are too large to be included in this repository, but you can generate
 - **Dropping Redundant Columns:**  
   - Remove unnecessary columns from the training, validation, and test datasets (e.g., `Original`, `traintest`, `negative_for`, `mainclass_set`, `sprot_version`, `len`, `cluster_ID`, `representative`, `sequence`, `accession`, and `query_name`) to finalize the feature matrix for model input.
 - Apply `MinMaxScaler` to scale all features
+
+---
+
+### Ablation Study on whole feature set
+- See `experiments/ablation_study.py`
+
+**Overview**
+   - Trains a multi-output RandomForest classifier using *all* available features.  
+   - Groups features based on their type/origin (e.g., Sequential, Physiochemical, HMM, PSSM, Sequence Embedding, QSAR).  
+   - Iteratively removes one feature group at a time, retrains the model, and evaluates performance to see how the removal of each group impacts the model.
+
+**Model**: Multi-output `RandomForestClassifier`  
+  - Key hyperparameters:  
+    - `n_estimators=200`  
+    - `max_depth=30`  
+    - `min_samples_split=10`  
+    - `min_samples_leaf=5`  
+    - `max_features='sqrt'`  
+  - The script handles multiple EC labels (columns) simultaneously in a multi-output setting.
+
+
+**Feature groups** include:
+
+- **Sequenctial**: Columns starting with `ACC_` or `DC_`.
+- **Physiochemical**: Includes columns like `molecular_weight`, `isoelectric_point`, `gravy`, `aromaticity`, `instability_index`, `aliphatic_index`, `boman_index`.  
+- **HMM**: Columns such as `E-value`, `score`, `coverage`, `num_domain`.  
+- **PSSM**: Columns starting with `pssm_`.  
+- **Sequence Embedding**: Columns starting with `embedded_`.  
+- **QSAR**: Default group for columns not falling into the above categories.
+
+The script removes each group in turn, retrains the RandomForest model, and compares the performance to the baseline (all features).
+
+All results are stored under `../metrics/Ablation_Results/`:
+
+- **`evaluation_reports/`**  
+  - Contains CSV files (e.g., `eval_report_Remove_X.csv`) for each ablation experiment.  
+  - A combined file `all_ablation_eval_reports.csv` aggregates all experiment results:
+  
+
+- **`confusion_matrices/`**  
+  - Subfolders for each experiment (e.g., `Remove_Sequenctial/`), each containing confusion matrix plots.
+
+- **`Ablation_Models/`** (Optional)  
+  - If enabled, stores trained model files (`.pkl`). By default, saving models is commented out in the script to reduce disk usage.
+
+---
 
 ### Feature Selection
 - See `experiments/feature_selection.py`
@@ -134,8 +186,22 @@ Some files are too large to be included in this repository, but you can generate
   Remove features with very low variance, which are unlikely to be informative for the prediction task.
   
 - **Implementation:**  
-  A `VarianceThreshold` with a threshold of 0.01 is applied to the combined training and validation data.  
+  A `VarianceThreshold` with a threshold of `0.001` is applied to the combined training and validation data.
+
+  ![img](metrics/feature_selection_results/Feature_Variance_Distribution.png)
+
+  | Threshold | # Features Remaining |
+  |-----------|----------------------|
+  | 0.0001    | 9252                 |
+  | 0.0005    | 9152                 |
+  | 0.001     | 8888                 |
+  | 0.005     | 4437                 |
+  | 0.01      | 319                  |
+
   This step results in a subset of features that have sufficient variation across samples.
+
+  ![img](metrics/feature_selection_results/Sorted_Feature_Variances.png)
+  ![img](metrics/feature_selection_results/Top50_Features_Var.png)
 
 #### 3. Multi-output Feature Selection via Mutual Information
 
@@ -145,10 +211,12 @@ Some files are too large to be included in this repository, but you can generate
 - **Implementation:**  
   - For each label, mutual information scores are computed using `mutual_info_classif`.
   - The scores for each feature are summed across all labels.
-  - The top features are then selected (with a maximum of 500 features) based on the aggregated scores.
+  - The top features are then selected (with a maximum of `1000` features) based on the aggregated scores.
+  ![img](metrics/feature_selection_results/Sorted_Mutual_Information_Scores.png)
   
 - **Outcome:**  
   This step yields a reduced set of features that are most informative for the multi-label task.
+  ![img](metrics/feature_selection_results/To50_Features_MI.png)
 
 #### 4. Final Feature Selection with RFECV
 
@@ -162,9 +230,13 @@ Some files are too large to be included in this repository, but you can generate
   - The elimination process proceeds in steps (removing 5 features per iteration) until the optimal feature subset is identified.
   
 - **Outcome:**  
-  The optimal feature indices are determined and saved, along with the grid scores from the RFECV process, for further use in model training.
+  The optimal feature indices are determined and saved (`100` features was selected), along with the grid scores from the RFECV process, for further use in model training.
+  
+![img](metrics/feature_selection_results/To50_Features_RFE.png)
 
-![img](metrics/rfecv_feature_selection.png)
+![img](metrics/feature_selection_results/rfecv_feature_selection.png)
+
+---
 
 ### Model Training
 - See `experiments/model_selection.py`
