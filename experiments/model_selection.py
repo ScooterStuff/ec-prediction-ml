@@ -37,9 +37,9 @@ sys.modules["numpy._core.numeric"] = np.core.numeric
 # ---------------------------
 def load_data(feature_method):
     """Load train, validation, and test data from pickle files."""
-    train_df = pd.read_pickle(f"../dataset/{feature_method}_features/train.pkl")
-    valid_df = pd.read_pickle(f"../dataset/{feature_method}_features/valid.pkl")
-    test_df  = pd.read_pickle(f"../dataset/{feature_method}_features/test.pkl")
+    train_df = pd.read_pickle(f"../dataset/all_features/train.pkl")
+    valid_df = pd.read_pickle(f"../dataset/all_features/valid.pkl")
+    test_df  = pd.read_pickle(f"../dataset/all_features/test.pkl")
     
     def get_feature_and_label(df):
         ec_cols = [col for col in df.columns if col.startswith('ec_')]
@@ -51,7 +51,7 @@ def load_data(feature_method):
 
     # apply selected features
     if feature_method == "selected":
-        with open("final_indices.pkl", "rb") as f:
+        with open("../metrics/feature_selection_results/final_indices.pkl", "rb") as f:
             final_indices = pickle.load(f)
         train_X = train_X.iloc[:, final_indices]
         valid_X = valid_X.iloc[:, final_indices]
@@ -135,4 +135,5 @@ def run_model_training(feature_method="selected"):
 # Main entry point
 # ---------------------------
 if __name__ == '__main__':
-    run_model_training(feature_method="all")
+    run_model_training(feature_method="selected")
+    # run_model_training(feature_method="all")

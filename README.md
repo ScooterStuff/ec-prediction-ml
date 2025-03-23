@@ -156,7 +156,8 @@ All results are stored under `../metrics/Ablation_Results/`:
 
 - **`evaluation_reports/`**  
   - Contains CSV files (e.g., `eval_report_Remove_X.csv`) for each ablation experiment.  
-  - A combined file `all_ablation_eval_reports.csv` aggregates all experiment results.
+  - A combined file `all_ablation_eval_reports.csv` aggregates all experiment results:
+  
 
 - **`confusion_matrices/`**  
   - Subfolders for each experiment (e.g., `Remove_Sequenctial/`), each containing confusion matrix plots.
@@ -229,9 +230,11 @@ All results are stored under `../metrics/Ablation_Results/`:
   - The elimination process proceeds in steps (removing 5 features per iteration) until the optimal feature subset is identified.
   
 - **Outcome:**  
-  The optimal feature indices are determined and saved, along with the grid scores from the RFECV process, for further use in model training.
+  The optimal feature indices are determined and saved (`100` features was selected), along with the grid scores from the RFECV process, for further use in model training.
+  
+![img](metrics/feature_selection_results/To50_Features_RFE.png)
 
-![img](metrics/rfecv_feature_selection.png)
+![img](metrics/feature_selection_results/rfecv_feature_selection.png)
 
 ---
 
