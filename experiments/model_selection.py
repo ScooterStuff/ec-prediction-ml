@@ -24,9 +24,9 @@ from sklearn.base import clone
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from catboost import CatBoostClassifier
-from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
+from imblearn.over_sampling import RandomOverSampler
 
 # For pickle version
 import sys
@@ -35,11 +35,11 @@ sys.modules["numpy._core.numeric"] = np.core.numeric
 # ---------------------------
 # Helper Functions
 # ---------------------------
-def load_data():
+def load_data(feature_method):
     """Load train, validation, and test data from pickle files."""
-    train_df = pd.read_pickle("../dataset/all_features/train.pkl")
-    valid_df = pd.read_pickle("../dataset/all_features/valid.pkl")
-    test_df  = pd.read_pickle("../dataset/all_features/test.pkl")
+    train_df = pd.read_pickle(f"../dataset/{feature_method}_features/train.pkl")
+    valid_df = pd.read_pickle(f"../dataset/{feature_method}_features/valid.pkl")
+    test_df  = pd.read_pickle(f"../dataset/{feature_method}_features/test.pkl")
     
     def get_feature_and_label(df):
         ec_cols = [col for col in df.columns if col.startswith('ec_')]
@@ -50,11 +50,12 @@ def load_data():
     test_X,  test_Y  = get_feature_and_label(test_df)
 
     # apply selected features
-    with open("final_indices.pkl", "rb") as f:
-        final_indices = pickle.load(f)
-    train_X = train_X.iloc[:, final_indices]
-    valid_X = valid_X.iloc[:, final_indices]
-    test_X = test_X.iloc[:, final_indices]
+    if feature_method == "selected":
+        with open("final_indices.pkl", "rb") as f:
+            final_indices = pickle.load(f)
+        train_X = train_X.iloc[:, final_indices]
+        valid_X = valid_X.iloc[:, final_indices]
+        test_X = test_X.iloc[:, final_indices]
     
     # Scale features
     scaler = MinMaxScaler()
@@ -77,7 +78,7 @@ def prepare_train_val(train_X, valid_X, train_Y, valid_Y):
     pds = PredefinedSplit(test_fold=split_index)
     return X_trainval, y_trainval, pds
 
-def cascade_model_training(model_base, X_trainval, y_trainval):
+def cascade_model_training(model_base, X_trainval, y_trainval, feature_method):
     """
     Train a cascade of models (one per output) using the given base model.
     Returns the list of trained models.
@@ -100,10 +101,10 @@ def cascade_model_training(model_base, X_trainval, y_trainval):
         
     return models
 
-def run_model_training():
+def run_model_training(feature_method="selected"):
     """Train cascade models for different candidate models and save them."""
     # Load and prepare data
-    train_X, train_Y, valid_X, valid_Y, test_X, test_Y = load_data()
+    train_X, train_Y, valid_X, valid_Y, test_X, test_Y = load_data(feature_method)
     X_trainval, y_trainval, pds = prepare_train_val(train_X, valid_X, train_Y, valid_Y)
     
     # Dictionary of candidate models to test
@@ -116,16 +117,16 @@ def run_model_training():
     }
     
     # Create a directory to save models if not exists
-    models_dir = "Selected_Feature_Models"
+    models_dir = "Selected_Feature_Models" if feature_method == "selected" else "Models"
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
     
     # Train cascade models for each candidate and save them
     for model_name, model_base in model_constructors.items():
         print(f"\n==== Training cascade model for: {model_name} ====")
-        models = cascade_model_training(model_base, X_trainval, y_trainval)
+        models = cascade_model_training(model_base, X_trainval, y_trainval, feature_method)
         
-        model_path = os.path.join(models_dir, f"cascade_models_{model_name}.pkl")
+        model_path = os.path.join(models_dir, f"{feature_method}_cascade_models_{model_name}.pkl")
         with open(model_path, "wb") as f:
             pickle.dump(models, f)
         print(f"Saved cascade models for {model_name} to {model_path}")
@@ -134,4 +135,4 @@ def run_model_training():
 # Main entry point
 # ---------------------------
 if __name__ == '__main__':
-    run_model_training()
+    run_model_training(feature_method="all")
