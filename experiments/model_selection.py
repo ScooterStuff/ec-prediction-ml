@@ -25,7 +25,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from catboost import CatBoostClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
+# from sklearn.svm import SVC
 from imblearn.over_sampling import RandomOverSampler
 
 # For pickle version
@@ -113,7 +113,7 @@ def run_model_training(feature_method="selected"):
         "LogisticRegression": LogisticRegression(random_state=42),
         "RandomForest": RandomForestClassifier(random_state=42, n_estimators=200, max_depth=None),
         "CatBoost": CatBoostClassifier(random_state=42, iterations=200, verbose=0),
-        "SVM": SVC(random_state=42, probability=True)
+        # "SVM": SVC(random_state=42, probability=True)
     }
     
     # Create a directory to save models if not exists
